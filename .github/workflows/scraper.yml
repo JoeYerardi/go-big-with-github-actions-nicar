@@ -1,0 +1,32 @@
+name: First Scraper
+
+on: # When will this action be triggered?
+  workflow_dispatch: # Allows us to run manually
+  schedule: # Schedule this task
+  - cron: "0 0 * * *" # When will this run?
+
+jobs:
+  scrape: # Job name
+    name: Scrape
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install scraper
+        run: pip install warn-scraper
+
+      - name: Scrape
+        run: warn-scraper ia --data-dir ./data/ # Scrape the Iowa WARN notices and store the data in the data folder
+
+      - name: Commit and push
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add ./data/
+          git commit -m "Latest data for Iowa" && git push || true
