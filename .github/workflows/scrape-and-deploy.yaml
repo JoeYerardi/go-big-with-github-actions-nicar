@@ -1,0 +1,68 @@
+name: Scrape and Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    name: Scrape the data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout # Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Install Python # Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install scraper # Install the Big Local News WARN scraper
+        run: pip install warn-scraper
+
+      - name: Scrape # Run the WARN scraper
+        run: warn-scraper ia --data-dir ./data/
+
+      - name: Commit and push # Commit and push (note this is occuring at the same time)
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add ./data/
+          git commit -m "Latest data" && git push || true
+
+      - name: upload-artifact # Save the data to the data folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: data
+          path: ./data/
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: scrape # Require the scrape job has already run
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.11"
+        
+      - name: Install dependencies
+        run: npm install --prefix site
+
+      - name: Download data
+        uses: actions/download-artifact@v4
+        with:
+          name: data
+          path: site/src/data/
+
+      - name: Build
+        run: npm run build --prefix site
+
+      - name: Upload release candidate
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "site/dist"
