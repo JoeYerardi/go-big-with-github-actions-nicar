@@ -2,6 +2,12 @@ name: First Scraper
 
 on: # When will this action be triggered?
   workflow_dispatch: # Allows us to run manually
+    inputs:
+      state:
+        description: 'U.S. state to scrape'
+        required: true
+        default: 'ia'
+        
   schedule: # Schedule this task
   - cron: "0 0 * * *" # When will this run?
 
@@ -25,11 +31,14 @@ jobs:
         run: pip install warn-scraper
 
       - name: Scrape
-        run: warn-scraper ia --data-dir ./data/ # Scrape the Iowa WARN notices and store the data in the data folder
+        run: warn-scraper ${{ inputs.state }} --data-dir ./data/ # Scrape the selected state's WARN notices and store the data in the data folder
+
+      - name: Save datestamp
+        run: date > ./data/latest-scrape.txt
 
       - name: Commit and push
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@users.noreply.github.com"
           git add ./data/
-          git commit -m "Latest data for Iowa" && git push || true
+          git commit -m "Latest data for ${{ inputs.state }}" && git push || true
